@@ -1,5 +1,8 @@
-// Renders the 1024×1024 app icon.
-// Usage: swift scripts/make-icon.swift YenToUSD/Assets.xcassets/AppIcon.appiconset/AppIcon.png
+// Renders the 1024×1024 app icon, then resize it for web/icons/:
+//   swift scripts/make-icon.swift /tmp/icon.png
+//   sips -z 180 180 /tmp/icon.png --out web/icons/apple-touch-icon.png
+//   sips -z 192 192 /tmp/icon.png --out web/icons/icon-192.png
+//   sips -z 512 512 /tmp/icon.png --out web/icons/icon-512.png
 import CoreGraphics
 import CoreText
 import Foundation
