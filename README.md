@@ -36,5 +36,5 @@ With a free Apple ID, the app expires after 7 days. Run it from Xcode again to r
 - **Run locally:** `python3 -m http.server 8123 -d web`, then open http://localhost:8123.
 - **Deploy:** every push to `main` that changes `web/` publishes it to GitHub Pages (`.github/workflows/pages.yml`).
 - **Offline:** `web/sw.js` caches the page, icons and fonts, so the app opens with no signal and falls back to the fixed rate. After you change the list of cached files, bump `CACHE` in `sw.js`. Edits to existing files show up on the second launch after a deploy.
-- **Haptics:** Safari has no vibration API, so each key press flips a hidden `<input type="checkbox" switch>`, which plays the iOS toggle tick (iOS 18+). This is an unofficial trick and may stop working in a future iOS. Android uses `navigator.vibrate`.
+- **Haptics:** Safari has no vibration API, so each keypad key is a `<label>` around a hidden `<input type="checkbox" switch>`. When a finger toggles a switch, iOS 18+ plays its toggle tick. Flipping the switch from code does not tick, so the tap has to land on the label. This is unofficial and may stop working in a future iOS. Android uses `navigator.vibrate`.
 - **Icons:** `web/icons/` are resized copies of the iPhone app icon (`sips -z <size> <size>`).

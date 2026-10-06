@@ -233,8 +233,9 @@
     .key { height: 62px; border-radius: 20px; }
   }
 
-  /* Switch used only to make iOS play its toggle haptic. Kept on the page, just invisible. */
-  #tick { position: fixed; top: 0; left: 0; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; }
+  .key { cursor: pointer; }
+  /* Each key wraps a hidden <input switch>; tapping it plays the iOS toggle haptic. */
+  .key input { position: absolute; width: 1px; height: 1px; margin: 0; opacity: 0; overflow: hidden; clip-path: inset(50%); }
 </style>
 </head>
 <body>
@@ -272,7 +273,6 @@
   <section class="keys" id="keys"></section>
 </main>
 
-<label id="tick" aria-hidden="true"><input type="checkbox" switch tabindex="-1"></label>
 
 <script>
 const FALLBACK_RATE = 149.5;
@@ -283,15 +283,6 @@ const state = { yen: '', split: 1, menuOpen: false, rate: FALLBACK_RATE, status:
 
 const $ = id => document.getElementById(id);
 const money = v => v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-// --- Haptics ---------------------------------------------------------------
-// Safari has no vibration API, but flipping an <input switch> (iOS 18+) plays the
-// system toggle tick. Unofficial, so it may stop working in a future iOS.
-const tickLabel = $('tick');
-function tick() {
-  if (navigator.vibrate) navigator.vibrate(10);
-  else tickLabel.click();
-}
 
 // --- Rate ------------------------------------------------------------------
 async function fetchOnce() {
@@ -341,13 +332,21 @@ function setSplit(ways) {
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '000', '0', 'back'];
 const BACK_ICON = '<svg width="28" height="22" viewBox="0 0 28 22" fill="none"><path d="M9 2H24a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H9L2 11Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M13 7.5l7 7M20 7.5l-7 7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>';
 
+// Keys are labels around a hidden <input switch>. Safari has no vibration API, but
+// when a finger toggles a switch, iOS 18+ plays its toggle haptic. Flipping one from
+// code does not tick, so the tap has to land on the switch's label.
 for (const k of KEYS) {
-  const b = document.createElement('button');
-  b.className = 'key' + (k === '000' || k === 'back' ? ' plain' : '') + (k === '000' ? ' small' : '');
-  b.setAttribute('aria-label', k === 'back' ? 'Delete' : k);
-  b.innerHTML = k === 'back' ? BACK_ICON : k;
-  b.addEventListener('click', () => { tick(); press(k); });
-  $('keys').append(b);
+  const key = document.createElement('label');
+  key.className = 'key' + (k === '000' || k === 'back' ? ' plain' : '') + (k === '000' ? ' small' : '');
+  key.innerHTML = (k === 'back' ? BACK_ICON : k) + '<input type="checkbox" switch tabindex="-1">';
+  key.setAttribute('role', 'button');
+  key.setAttribute('aria-label', k === 'back' ? 'Delete' : k);
+  key.querySelector('input').addEventListener('change', e => {
+    e.target.blur(); // so Space on a keyboard doesn't re-trigger the last key
+    navigator.vibrate?.(10); // Android
+    press(k);
+  });
+  $('keys').append(key);
 }
 
 const menuItems = [1, 2, 3, 4].map(ways => {
@@ -413,7 +412,7 @@ $('splitBtn').addEventListener('click', () => { state.menuOpen = !state.menuOpen
 
 // Tapping anywhere outside the split area closes the menu.
 document.addEventListener('click', e => {
-  if (state.menuOpen && !$('split').contains(e.target) && e.target !== tickLabel) {
+  if (state.menuOpen && !$('split').contains(e.target)) {
     state.menuOpen = false;
     render();
   }
