@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Yen to USD</title>
+<meta name="description" content="Convert yen to dollars and split the bill.">
+<meta name="theme-color" content="#0a0a0b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Yen to USD">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* Colors from the Claude Design mock. */
+  :root {
+    --bg: #0a0a0b;
+    --text: #f2efe8;
+    --bright: #f6f3ec;
+    --muted: #8e8b85;
+    --dim: #6b6964;
+    --faint: #4a4946;
+    --ghost: #3a3937;
+    --yen: #a9a6a0;
+    --key: #161618;
+    --key-hover: #222225;
+    --key-pressed: #333337;
+    --card: #141415;
+    --card-border: #232325;
+    --menu: #1a1a1c;
+    --menu-border: #2c2c2f;
+    --selected: #2a2a2d;
+    --accent: #ff6a3d;
+    --live: #34c759;
+    --offline: #ff453a;
+    --mono: 'Geist Mono', ui-monospace, monospace;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Geist', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -webkit-text-size-adjust: 100%;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  button {
+    font: inherit;
+    color: inherit;
+    border: 0;
+    background: none;
+    padding: 0;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .app {
+    max-width: 430px;
+    height: 100dvh;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: calc(env(safe-area-inset-bottom) + 8px);
+  }
+
+  /* Header */
+  .top {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 24px 0;
+  }
+  .title { font: 500 13px 'Geist', sans-serif; letter-spacing: .02em; color: var(--muted); }
+  .pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    font: 400 12px var(--mono);
+    color: var(--muted);
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--dim); transition: background .2s; }
+  .pill[data-status="live"] .dot { background: var(--live); }
+  .pill[data-status="fallback"] .dot { background: var(--offline); }
+
+  /* Amounts */
+  .amounts {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 6px;
+    padding: 0 24px 18px;
+  }
+  .yen-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 34px; }
+  .yen { font: 400 28px/1.1 var(--mono); letter-spacing: -.01em; color: var(--faint); white-space: nowrap; }
+  .has-value .yen { color: var(--yen); }
+  .clear {
+    background: #1d1d1f;
+    color: #b5b2ab;
+    font: 500 13px 'Geist', sans-serif;
+    padding: 7px 12px;
+    border-radius: 999px;
+  }
+  .app:not(.has-value) .clear { visibility: hidden; }
+  .usd {
+    font-weight: 300;
+    font-size: 88px;
+    line-height: 1;
+    letter-spacing: -.04em;
+    color: var(--ghost);
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .has-value .usd { color: var(--bright); }
+
+  /* Split */
+  .split { flex: none; position: relative; margin: 0 16px 12px; }
+  .split-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 64px;
+    padding: 10px 10px 10px 18px;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 20px;
+  }
+  .split-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .split-caption { font: 500 12px 'Geist', sans-serif; color: var(--muted); }
+  .each { font: 500 22px var(--mono); letter-spacing: -.02em; color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .splitting .each { color: var(--accent); }
+  .split-btn {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 44px;
+    padding: 0 14px 0 16px;
+    border-radius: 14px;
+    background: #232326;
+    color: var(--text);
+    font: 500 15px 'Geist', sans-serif;
+  }
+  .splitting .split-btn { background: var(--accent); color: var(--bg); }
+  .split-btn .ways { font-family: var(--mono); }
+  .chevron { transform: rotate(180deg); transition: transform .2s; }
+  .menu-open .chevron { transform: rotate(0deg); }
+
+  .menu {
+    position: absolute;
+    right: 0;
+    bottom: 74px;
+    z-index: 5;
+    width: 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px;
+    background: var(--menu);
+    border: 1px solid var(--menu-border);
+    border-radius: 18px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, .7);
+    opacity: 0;
+    transform: scale(.95);
+    transform-origin: bottom right;
+    pointer-events: none;
+    transition: opacity .2s, transform .2s;
+  }
+  .menu-open .menu { opacity: 1; transform: none; pointer-events: auto; }
+  .menu button {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 46px;
+    padding: 0 14px;
+    border-radius: 12px;
+    font: 500 15px 'Geist', sans-serif;
+    text-align: left;
+  }
+  .menu button[aria-checked="true"] { background: var(--selected); }
+  .menu .hint { font: 400 13px var(--mono); color: var(--dim); }
+  .menu button[aria-checked="true"] .hint { color: var(--accent); }
+
+  /* Keypad */
+  .keys {
+    flex: none;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    padding: 0 16px;
+  }
+  .key {
+    height: 74px;
+    border-radius: 22px;
+    background: var(--key);
+    font: 400 32px 'Geist', sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .08s, transform .08s;
+  }
+  .key.plain { background: transparent; }
+  .key.small { font-size: 24px; }
+  .key:active { background: var(--key-pressed); transform: scale(.97); }
+  @media (hover: hover) {
+    .key:hover { background: var(--key-hover); }
+    .clear:hover { background: #2a2a2d; color: var(--text); }
+    .menu button:hover { background: #252528; }
+  }
+  @media (max-height: 700px) {
+    .key { height: 62px; border-radius: 20px; }
+  }
+
+  /* Switch used only to make iOS play its toggle haptic. Kept on the page, just invisible. */
+  #tick { position: fixed; top: 0; left: 0; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; }
+</style>
+</head>
+<body>
+<main class="app" id="app">
+  <header class="top">
+    <span class="title">JPY → USD</span>
+    <button class="pill" id="pill" data-status="loading" aria-label="Loading rate">
+      <span class="dot"></span>
+      <span id="rate">$1 = ¥149.50</span>
+    </button>
+  </header>
+
+  <section class="amounts">
+    <div class="yen-row">
+      <span class="yen" id="yen">¥0</span>
+      <button class="clear" id="clear">Clear</button>
+    </div>
+    <div class="usd" id="usd">$0.00</div>
+  </section>
+
+  <section class="split" id="split">
+    <div class="menu" id="menu" role="menu"></div>
+    <div class="split-card">
+      <div class="split-text">
+        <span class="split-caption" id="caption">Split the bill</span>
+        <span class="each" id="each">$0.00</span>
+      </div>
+      <button class="split-btn" id="splitBtn" aria-haspopup="menu">
+        <span>Split</span><span class="ways" id="ways">÷1</span>
+        <svg class="chevron" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 7.5L6 4.5L9 7.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+  </section>
+
+  <section class="keys" id="keys"></section>
+</main>
+
+<label id="tick" aria-hidden="true"><input type="checkbox" switch tabindex="-1"></label>
+
+<script>
+const FALLBACK_RATE = 149.5;
+// Frankfurter: free, no API key, ECB reference rates.
+const RATE_URL = 'https://api.frankfurter.dev/v1/latest?base=USD&symbols=JPY';
+
+const state = { yen: '', split: 1, menuOpen: false, rate: FALLBACK_RATE, status: 'loading' };
+
+const $ = id => document.getElementById(id);
+const money = v => v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+// --- Haptics ---------------------------------------------------------------
+// Safari has no vibration API, but flipping an <input switch> (iOS 18+) plays the
+// system toggle tick. Unofficial, so it may stop working in a future iOS.
+const tickLabel = $('tick');
+function tick() {
+  if (navigator.vibrate) navigator.vibrate(10);
+  else tickLabel.click();
+}
+
+// --- Rate ------------------------------------------------------------------
+async function fetchOnce() {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 5000);
+  try {
+    const res = await fetch(RATE_URL, { cache: 'no-store', signal: ctrl.signal });
+    if (!res.ok) return null;
+    const rate = (await res.json())?.rates?.JPY;
+    return typeof rate === 'number' && rate > 0 ? rate : null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+let refreshId = 0;
+async function refreshRate() {
+  const id = ++refreshId;
+  state.status = 'loading';
+  render();
+  // Two tries, since the first request after waking up occasionally stalls.
+  const live = (await fetchOnce()) ?? (await fetchOnce());
+  if (id !== refreshId) return; // a newer refresh started meanwhile
+  state.rate = live ?? FALLBACK_RATE;
+  state.status = live ? 'live' : 'fallback';
+  render();
+}
+
+// --- Input -----------------------------------------------------------------
+function press(key) {
+  state.menuOpen = false;
+  if (key === 'back') state.yen = state.yen.slice(0, -1);
+  else if (state.yen === '' && (key === '0' || key === '000')) { render(); return; }
+  else state.yen = (state.yen + key).slice(0, 10);
+  render();
+}
+
+function setSplit(ways) {
+  state.split = ways;
+  state.menuOpen = false;
+  render();
+}
+
+// --- Render ----------------------------------------------------------------
+const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '000', '0', 'back'];
+const BACK_ICON = '<svg width="28" height="22" viewBox="0 0 28 22" fill="none"><path d="M9 2H24a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H9L2 11Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M13 7.5l7 7M20 7.5l-7 7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>';
+
+for (const k of KEYS) {
+  const b = document.createElement('button');
+  b.className = 'key' + (k === '000' || k === 'back' ? ' plain' : '') + (k === '000' ? ' small' : '');
+  b.setAttribute('aria-label', k === 'back' ? 'Delete' : k);
+  b.innerHTML = k === 'back' ? BACK_ICON : k;
+  b.addEventListener('click', () => { tick(); press(k); });
+  $('keys').append(b);
+}
+
+const menuItems = [1, 2, 3, 4].map(ways => {
+  const b = document.createElement('button');
+  b.setAttribute('role', 'menuitemradio');
+  b.innerHTML = `<span>${ways === 1 ? 'No split' : ways + ' ways'}</span><span class="hint"></span>`;
+  b.addEventListener('click', () => setSplit(ways));
+  $('menu').append(b);
+  return b;
+});
+
+// Same steps as the design's renderVals, then shrink further if it still overflows.
+function fitUsd() {
+  const el = $('usd');
+  const len = el.textContent.length - 1; // without the "$"
+  let size = len <= 6 ? 88 : len <= 8 ? 76 : len <= 10 ? 62 : len <= 12 ? 52 : 44;
+  el.style.fontSize = size + 'px';
+  while (el.scrollWidth > el.clientWidth && size > 28) {
+    size -= 2;
+    el.style.fontSize = size + 'px';
+  }
+}
+
+function render() {
+  const n = state.yen ? parseInt(state.yen, 10) : 0;
+  const usd = n / state.rate;
+  const app = $('app');
+
+  app.classList.toggle('has-value', n > 0);
+  app.classList.toggle('splitting', state.split > 1);
+  app.classList.toggle('menu-open', state.menuOpen);
+
+  $('yen').textContent = '¥' + n.toLocaleString('en-US');
+  $('usd').textContent = '$' + money(usd);
+  fitUsd();
+
+  $('caption').textContent = state.split > 1 ? `Each of ${state.split} pays` : 'Split the bill';
+  $('each').textContent = '$' + money(usd / state.split);
+  $('ways').textContent = '÷' + state.split;
+  $('splitBtn').setAttribute('aria-expanded', state.menuOpen);
+
+  menuItems.forEach((b, i) => {
+    const ways = i + 1;
+    const selected = ways === state.split;
+    b.setAttribute('aria-checked', selected);
+    b.querySelector('.hint').textContent = selected ? '✓' : '$' + money(usd / ways);
+  });
+
+  const pill = $('pill');
+  pill.dataset.status = state.status;
+  $('rate').textContent = '$1 = ¥' + state.rate.toFixed(2);
+  pill.setAttribute('aria-label', {
+    loading: 'Loading rate',
+    live: `Live rate, 1 dollar equals ${state.rate.toFixed(2)} yen. Tap to refresh.`,
+    fallback: `Offline, using fixed rate of ${state.rate.toFixed(2)} yen. Tap to retry.`,
+  }[state.status]);
+}
+
+// --- Events ----------------------------------------------------------------
+$('clear').addEventListener('click', () => { state.yen = ''; render(); });
+$('pill').addEventListener('click', refreshRate);
+$('splitBtn').addEventListener('click', () => { state.menuOpen = !state.menuOpen; render(); });
+
+// Tapping anywhere outside the split area closes the menu.
+document.addEventListener('click', e => {
+  if (state.menuOpen && !$('split').contains(e.target) && e.target !== tickLabel) {
+    state.menuOpen = false;
+    render();
+  }
+});
+
+// Hardware keyboard (handy on a laptop).
+window.addEventListener('keydown', e => {
+  if (/^[0-9]$/.test(e.key)) press(e.key);
+  else if (e.key === 'Backspace') press('back');
+  else if (e.key === 'Escape') { state.yen = ''; state.menuOpen = false; render(); }
+});
+
+// iOS only applies :active styles when a touch listener exists.
+document.addEventListener('touchstart', () => {}, { passive: true });
+
+// Refresh the rate when the app comes back to the foreground.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') refreshRate();
+});
+
+document.fonts?.ready.then(fitUsd);
+render();
+refreshRate();
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js');
+}
+</script>
+</body>
+</html>
