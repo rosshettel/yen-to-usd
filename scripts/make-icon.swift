@@ -1,0 +1,51 @@
+// Renders the 1024×1024 app icon.
+// Usage: swift scripts/make-icon.swift YenToUSD/Assets.xcassets/AppIcon.appiconset/AppIcon.png
+import CoreGraphics
+import CoreText
+import Foundation
+import ImageIO
+import UniformTypeIdentifiers
+
+let size = 1024
+let out = CommandLine.arguments.dropFirst().first ?? "AppIcon.png"
+
+func rgb(_ hex: UInt32) -> CGColor {
+    CGColor(srgbRed: CGFloat((hex >> 16) & 0xff) / 255,
+            green: CGFloat((hex >> 8) & 0xff) / 255,
+            blue: CGFloat(hex & 0xff) / 255, alpha: 1)
+}
+
+// Opaque context: App Store icons can't have alpha.
+let ctx = CGContext(data: nil, width: size, height: size, bitsPerComponent: 8, bytesPerRow: 0,
+                    space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                    bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)!
+
+// Background: the app's near-black with a faint lift toward the top.
+let gradient = CGGradient(colorsSpace: nil, colors: [rgb(0x1c1c1f), rgb(0x0a0a0b)] as CFArray, locations: [0, 1])!
+ctx.drawLinearGradient(gradient, start: CGPoint(x: 0, y: CGFloat(size)), end: .zero, options: [])
+
+// "¥$" in a light weight like the app's big amount: yen in cream, dollar in the accent.
+func run(_ s: String, _ color: CGColor) -> NSAttributedString {
+    let font = CTFontCreateUIFontForLanguage(.system, 560, nil)!
+    let light = CTFontCreateCopyWithAttributes(font, 560, nil,
+        CTFontDescriptorCreateWithAttributes([kCTFontTraitsAttribute: [kCTFontWeightTrait: -0.4]] as CFDictionary))
+    return NSAttributedString(string: s, attributes: [
+        kCTFontAttributeName as NSAttributedString.Key: light,
+        kCTForegroundColorAttributeName as NSAttributedString.Key: color,
+        kCTKernAttributeName as NSAttributedString.Key: -28,
+    ])
+}
+let text = NSMutableAttributedString()
+text.append(run("¥", rgb(0xf2efe8)))
+text.append(run("$", rgb(0xff6a3d)))
+
+let line = CTLineCreateWithAttributedString(text)
+let bounds = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)
+ctx.textPosition = CGPoint(x: (CGFloat(size) - bounds.width) / 2 - bounds.minX,
+                           y: (CGFloat(size) - bounds.height) / 2 - bounds.minY)
+CTLineDraw(line, ctx)
+
+let dest = CGImageDestinationCreateWithURL(URL(fileURLWithPath: out) as CFURL, UTType.png.identifier as CFString, 1, nil)!
+CGImageDestinationAddImage(dest, ctx.makeImage()!, nil)
+CGImageDestinationFinalize(dest)
+print("wrote \(out)")
