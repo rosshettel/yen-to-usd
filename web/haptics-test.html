@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Haptics Test</title>
+<style>
+  :root { color-scheme: dark; }
+  body {
+    margin: 0;
+    padding: calc(env(safe-area-inset-top) + 20px) 20px 40px;
+    background: #0a0a0b;
+    color: #f2efe8;
+    font: 16px/1.4 system-ui, sans-serif;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  p { color: #8e8b85; margin: 0 0 16px; }
+  .row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    background: #141415;
+    border: 1px solid #232325;
+    border-radius: 16px;
+  }
+  .row b { display: block; }
+  .row small { color: #8e8b85; }
+  button {
+    flex: none;
+    font: 500 16px system-ui, sans-serif;
+    color: #0a0a0b;
+    background: #ff6a3d;
+    border: 0;
+    border-radius: 12px;
+    padding: 12px 18px;
+  }
+  pre {
+    white-space: pre-wrap;
+    word-break: break-word;
+    font: 12px ui-monospace, monospace;
+    color: #a9a6a0;
+    background: #141415;
+    border-radius: 12px;
+    padding: 12px;
+  }
+  #hidden1 { position: fixed; top: 0; left: 0; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; }
+</style>
+</head>
+<body>
+<h1>Haptics test</h1>
+<p>Tap each one and note which buzz. A tick is very light, like flipping a toggle in Settings.</p>
+
+<div class="row">
+  <div><b>A. Real switch</b><small>Flip it yourself. If this doesn't tick, haptics are off on the phone.</small></div>
+  <input type="checkbox" switch>
+</div>
+
+<div class="row">
+  <div><b>B. Hidden switch (current app)</b><small>A switch that's always on the page, invisible.</small></div>
+  <button id="b">Tap</button>
+</div>
+
+<div class="row">
+  <div><b>C. Throwaway switch</b><small>Created with display: none, clicked, then removed.</small></div>
+  <button id="c">Tap</button>
+</div>
+
+<div class="row">
+  <div><b>D. Vibration API</b><small>navigator.vibrate(), which the app uses when it exists.</small></div>
+  <button id="d">Tap</button>
+</div>
+
+<pre id="info"></pre>
+
+<label id="hidden1" aria-hidden="true"><input type="checkbox" switch tabindex="-1"></label>
+
+<script>
+const log = [];
+const info = document.getElementById('info');
+function show(extra) {
+  if (extra) log.unshift(new Date().toLocaleTimeString() + ' ' + extra);
+  info.textContent = [
+    'navigator.vibrate: ' + typeof navigator.vibrate,
+    "'switch' in input: " + ('switch' in HTMLInputElement.prototype),
+    'standalone: ' + (navigator.standalone ?? matchMedia('(display-mode: standalone)').matches),
+    'pointer coarse: ' + matchMedia('(pointer: coarse)').matches,
+    'UA: ' + navigator.userAgent,
+    '',
+    ...log.slice(0, 8),
+  ].join('\n');
+}
+
+document.getElementById('b').addEventListener('click', () => {
+  document.getElementById('hidden1').click();
+  show('B: clicked hidden label');
+});
+
+document.getElementById('c').addEventListener('click', () => {
+  const label = document.createElement('label');
+  label.ariaHidden = 'true';
+  label.style.display = 'none';
+  const input = document.createElement('input');
+  input.type = 'checkbox';
+  input.setAttribute('switch', '');
+  label.appendChild(input);
+  document.head.appendChild(label);
+  label.click();
+  label.remove();
+  show('C: clicked throwaway label');
+});
+
+document.getElementById('d').addEventListener('click', () => {
+  if (!navigator.vibrate) return show('D: no vibrate API');
+  show('D: vibrate returned ' + navigator.vibrate(10));
+});
+
+show();
+</script>
+</body>
+</html>
