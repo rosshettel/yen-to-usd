@@ -9,7 +9,6 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Yen to USD">
-<!-- Opaque bar: with "black-translucent", iOS 26 blurs page content under the status bar. -->
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -84,7 +83,9 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 10px 24px 0;
+    /* Extra top space keeps the rate pill out of the blur iOS 26 draws under the
+       status bar, which otherwise smears it into a light patch. */
+    padding: 34px 24px 0;
   }
   .title { font: 500 13px 'Geist', sans-serif; letter-spacing: .02em; color: var(--muted); }
   .pill {
