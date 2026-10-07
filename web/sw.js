@@ -1,6 +1,6 @@
 // Offline support: serve the app (and its fonts) from cache, refreshing the cache
 // in the background. The rate API is not cached; the page falls back on its own.
-const CACHE = 'yen-to-usd-v3';
+const CACHE = 'yen-to-usd-v4';
 const SHELL = [
   './',
   './index.html',

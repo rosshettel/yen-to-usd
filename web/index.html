@@ -26,7 +26,6 @@
     --dim: #6b6964;
     --faint: #4a4946;
     --ghost: #3a3937;
-    --yen: #a9a6a0;
     --key: #161618;
     --key-hover: #222225;
     --key-pressed: #333337;
@@ -113,9 +112,19 @@
     gap: 6px;
     padding: 0 24px 18px;
   }
-  .yen-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 34px; }
-  .yen { font: 400 28px/1.1 var(--mono); letter-spacing: -.01em; color: var(--faint); white-space: nowrap; }
-  .has-value .yen { color: var(--yen); }
+  .yen-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  /* Yen and USD share one size (set by fitAmounts): yen in white, USD in the accent. */
+  .yen, .usd {
+    min-width: 0;
+    font-weight: 300;
+    font-size: 64px;
+    line-height: 1.05;
+    letter-spacing: -.04em;
+    color: var(--ghost);
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .has-value .yen { color: var(--bright); }
   .clear {
     background: #1d1d1f;
     color: #b5b2ab;
@@ -124,16 +133,7 @@
     border-radius: 999px;
   }
   .app:not(.has-value) .clear { visibility: hidden; }
-  .usd {
-    font-weight: 300;
-    font-size: 88px;
-    line-height: 1;
-    letter-spacing: -.04em;
-    color: var(--ghost);
-    white-space: nowrap;
-    overflow: hidden;
-  }
-  .has-value .usd { color: var(--bright); }
+  .has-value .usd { color: var(--accent); }
 
   /* Split */
   .split { flex: none; position: relative; margin: 0 16px 12px; }
@@ -359,15 +359,15 @@ const menuItems = [1, 2, 3, 4].map(ways => {
   return b;
 });
 
-// Same steps as the design's renderVals, then shrink further if it still overflows.
-function fitUsd() {
-  const el = $('usd');
-  const len = el.textContent.length - 1; // without the "$"
-  let size = len <= 6 ? 88 : len <= 8 ? 76 : len <= 10 ? 62 : len <= 12 ? 52 : 44;
-  el.style.fontSize = size + 'px';
-  while (el.scrollWidth > el.clientWidth && size > 28) {
+// Yen and USD always share one font size: the largest that fits both.
+function fitAmounts() {
+  const els = [$('yen'), $('usd')];
+  const overflows = () => els.some(el => el.scrollWidth > el.clientWidth);
+  let size = 64;
+  els.forEach(el => el.style.fontSize = size + 'px');
+  while (overflows() && size > 24) {
     size -= 2;
-    el.style.fontSize = size + 'px';
+    els.forEach(el => el.style.fontSize = size + 'px');
   }
 }
 
@@ -382,7 +382,7 @@ function render() {
 
   $('yen').textContent = '¥' + n.toLocaleString('en-US');
   $('usd').textContent = '$' + money(usd);
-  fitUsd();
+  fitAmounts();
 
   $('caption').textContent = state.split > 1 ? `Each of ${state.split} pays` : 'Split the bill';
   $('each').textContent = '$' + money(usd / state.split);
@@ -434,7 +434,7 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') refreshRate();
 });
 
-document.fonts?.ready.then(fitUsd);
+document.fonts?.ready.then(fitAmounts);
 render();
 refreshRate();
 
