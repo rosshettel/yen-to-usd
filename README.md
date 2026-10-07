@@ -2,7 +2,7 @@
 
 A small web app for converting yen to dollars and splitting the bill. It works offline once installed. Built from the Claude Design mock `Yen to USD.dc.html`.
 
-<img src="docs/screenshot.png" alt="Yen to USD showing ¥12,500 as $79.07, split three ways at $26.36 each" width="300">
+<img src="docs/screenshot.png" alt="Yen to USD showing ¥12,500 as $79.00, split three ways at $26.33 each" width="300">
 
 **https://rosshettel.github.io/yen-to-usd/**
 
